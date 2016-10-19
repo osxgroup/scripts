@@ -1,0 +1,4 @@
+*.local
+*client*
+*.DS_Store
+old/

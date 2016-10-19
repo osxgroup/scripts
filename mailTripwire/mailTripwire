@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# tests an imap login and alerts if too many failures
+
+IMAP_USER="testuser"
+IMAP_PW="password"
+IMAP_SERVER="hostname"
+
+# EMail Notifications
+# Who to notify - separate multiple addresses with a space
+MAIL_TO="someone@email.com someone@another.com"
+
+# SLACK: leave URL empty to disable
+SLACK_URL=https://hooks.slack.com/services/T075J61T4/B11HUGRV0/apikey
+SLACK_COLOR=danger
+SLACK_ICON=zap
+
+# Failures required to trigger alert
+MAX_FAILS=10
+
+# retry delay
+RETRY=30
+
+#######################################################################################
+
+msg() { [[ -t 0 ]] && echo "${@}"; }
+
+main() {
+  COUNT=0
+  while true; do
+     curl  --insecure --url imaps://$IMAP_SERVER --user "${IMAP_USER}":"${IMAP_PW}" &>/dev/null
+     if [[ "$?" -gt "0" ]]; then
+       COUNT=$((COUNT+1))
+       msg "Fail #${COUNT}"
+       [[ "$COUNT" -gt "$MAX_FAILS" ]] && alert  
+    else
+      COUNT=0
+      msg "OK: waiting $RETRY seconds for next try" 
+    fi
+  sleep $RETRY
+  done
+   }
+  
+alert() { 
+    [[ -n "$SLACK_URL" ]] && alert_slack
+    [[ -n "$MAIL_TO" ]] && alert_mail
+    COUNT=0; }
+
+alert_slack() {
+    title="${HOSTNAME}: IMAP logins are failing"
+    text="${HOSTNAME}: ${MAX_FAILS} failed logins for the test user ${IMAP_USER}"
+    json="{\"username\":\"$HOSTNAME\", \"icon_emoji\":\":$SLACK_ICON:\", \"text\":\"$title\", \"attachments\":[{\"color\":\"$SLACK_COLOR\" , \"text\": \"$text\"}]}"
+    curl -s -d "payload=$json" "$SLACK_URL" &>/dev/null && echo "SLACK alert sent: $text" | logger -s -t mailTripwire
+  }
+
+
+alert_mail() {
+    echo -e "${text}" | mail -E -s "$title" $MAIL_TO && echo "EMAIL alert sent to ${MAIL_TO}: $text" | logger -s -t mailTripwire
+  }
+
+
+
+main
+
+exit 
