@@ -1,0 +1,29 @@
+#!/bin/bash
+
+Correct_URL="http://backup.grafik.com/content/catalogs/index_Production.sucatalog"
+TARGET_LAN="192.168.4"
+
+## Run via meraki with:
+curl -s 
+
+die() { echo "$@"; exit; }
+
+COMP_NAME=$(scutil --get ComputerName);
+netstat -rn | grep "^default" | grep "$TARGET_LAN" >/dev/null 2>&1 || die "Skipped (not on LAN)"
+
+Log_URL=$(grep "SUScan: Using catalog http" /var/log/install.log | tail -1 | awk '{print $9}')
+[ "$Correct_URL" = "$Log_URL" ] && die "ok"
+
+echo "------------------------"
+echo "$COMP_NAME - $(sw_vers -productVersion)"
+echo "";
+[ ! -n "$LOGGED_URL" ] && echo "No swupdate entries are in /var/log/install.log" || echo "Wrong catalogURL"; echo
+
+
+echo "CORRECT: $Correct_URL"; echo "ACTUAL:  $Log_URL"; echo
+
+PROFILES=$(/usr/bin/profiles -Pv | grep payload | grep identifier | grep softwareupdate | grep -v meraki.profile.softwareupdate | awk '{print $1 $4 $5}')
+[ -n "$PROFILES" ] && echo "WARNING: non-meraki softwareupdate profile"
+echo "${PROFILES}"
+
+
