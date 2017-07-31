@@ -2,7 +2,7 @@ Correct_URL="http://backup.grafik.com/content/catalogs/index_Production.sucatalo
 TARGET_LAN="192.168.4"
 
 ## Run via meraki with:
-curl -s 
+# curl -sf https://raw.githubusercontent.com/osxgroup/scripts/master/meraki-check-catalogurl | bash
 
 die() { echo "$@"; exit; }
 
